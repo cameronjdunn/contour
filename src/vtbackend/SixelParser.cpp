@@ -324,7 +324,7 @@ void SixelParser::leaveState()
                         // (Hue angle seems to be shifted by 120 deg in other Sixel implementations.)
                         auto const h = static_cast<double>(_params[2]) - 120.0;
                         auto const hc = (h < 0 ? 360 + h : h) / 360.0;
-                        auto const sc = static_cast<double>(_params[3]) / 100.0;
+                        auto const sc = static_cast<double>(_params[4]) / 100.0;
                         auto const ls = static_cast<double>(_params[3]) / 100.0;
                         auto const rgb = hsl2rgb(hc, sc, ls);
                         _events.setColor(index, rgb);
@@ -478,7 +478,7 @@ void SixelImageBuilder::finalize()
 {
     if (unbox(_size.height) == 1)
     {
-        _size.height = Height::cast_from(_sixelCursor.line.as<unsigned int>() * _aspectRatio);
+        _size.height = Height::cast_from(_sixelCursor.line.as<unsigned int>() + _sixelBandHeight);
         _buffer.resize(_size.area() * 4);
         return;
     }
@@ -487,12 +487,9 @@ void SixelImageBuilder::finalize()
         Buffer tempBuffer(static_cast<size_t>(_size.height.value * _size.width.value) * 4);
         for (auto i = 0u; i < unbox(_size.height); ++i)
         {
-            for (auto j = 0u; j < unbox(_size.width); ++j)
-            {
-                std::copy_n(_buffer.begin() + i * unbox<long>(_maxSize.width) * 4,
-                            _size.width.value * 4,
-                            tempBuffer.begin() + i * unbox<long>(_size.width) * 4);
-            }
+            std::copy_n(_buffer.begin() + i * unbox<long>(_maxSize.width) * 4,
+                        _size.width.value * 4,
+                        tempBuffer.begin() + i * unbox<long>(_size.width) * 4);
         }
         _buffer.swap(tempBuffer);
         _explicitSize = false;

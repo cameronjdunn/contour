@@ -185,6 +185,15 @@ Terminal::Terminal(Events& eventListener,
 
     for (auto const& [mode, frozen]: _settings.frozenModes)
         freezeMode(mode, frozen);
+
+    // Initialize word delimiter callbacks so they're never empty (avoids std::bad_function_call
+    // if word-wise selection is triggered before setWordDelimiters is called externally).
+    _selectionHelper.wordDelimited = [this](CellLocation const& pos) {
+        return wordDelimited(pos, _settings.wordDelimiters);
+    };
+    _extendedSelectionHelper.wordDelimited = [this](CellLocation const& pos) {
+        return wordDelimited(pos, _settings.extendedWordDelimiters);
+    };
 }
 
 void Terminal::onViewportChanged()
