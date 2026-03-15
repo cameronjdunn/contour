@@ -170,8 +170,6 @@ void ConPty::start()
     ptyLog()("Starting ConPTY");
     assert(!_slave);
 
-    _slave = make_unique<ConPtySlave>(_output);
-
     HANDLE hPipePTYIn { INVALID_HANDLE_VALUE };
     HANDLE hPipePTYOut { INVALID_HANDLE_VALUE };
 
@@ -184,6 +182,9 @@ void ConPty::start()
         CloseHandle(hPipePTYIn);
         throw runtime_error { GetLastErrorAsString() };
     }
+
+    // Create slave AFTER pipes so it gets a valid _output handle
+    _slave = make_unique<ConPtySlave>(_output);
 
     // Create the Pseudo Console of the required size, attached to the PTY-end of the pipes
     HRESULT hr = _conptyApi->createPseudoConsole(
