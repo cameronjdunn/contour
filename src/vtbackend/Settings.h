@@ -107,6 +107,12 @@ struct Settings
     bool fromSearchIntoInsertMode = true;
     bool isInsertAfterYank = false;
 
+    // When true, DECSET/DECRST 1049 (alternate screen) does NOT switch pages.
+    // Instead it clears the visible screen.  This is required when the PTY is
+    // ConPTY, because ConPTY manages the alternate buffer internally and also
+    // passes the escape sequences through, causing double-handling conflicts.
+    bool conPtyCompatAltScreen = false;
+
     TabsNamingMode tabNamingMode = TabsNamingMode::Indexing;
 
     // TODO: we could configure also the number of lines of the host writable statusline and indicator

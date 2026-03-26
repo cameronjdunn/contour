@@ -2355,10 +2355,29 @@ void Terminal::setMode(DECMode mode, bool enable)
                 category.get().enable(enable);
             break;
         case DECMode::UseAlternateScreen:
+            if (_settings.conPtyCompatAltScreen)
+            {
+                // ConPTY handles alt screen internally.  Skip page switch but
+                // save/restore cursor so it matches ConPTY's expectations, and
+                // erase visible cells on exit to clear TUI remnants.
+                if (enable)
+                {
+                    _currentScreen->saveCursor();
+                }
+                else
+                {
+                    auto& screen = pageAt(_cursorPage);
+                    auto const defaultFlags = screen.grid().defaultLineFlags();
+                    auto const& sgr = _currentScreen->cursor().graphicsRendition;
+                    for (int i = 0; i < screen.pageSize().lines.value; ++i)
+                        screen.grid().lineAt(LineOffset::cast_from(i)).reset(defaultFlags, sgr);
+                    _currentScreen->restoreCursor();
+                }
+                _eventListener.screenUpdated();
+                return; // skip _modes.set() to avoid side effects
+            }
             if (enable)
             {
-                // Copy the originating page's margins to the alternate screen page,
-                // because xterm alt screen traditionally inherits the primary screen's margins.
                 _pageMargins[AlternateScreenPageIndex.value] = currentPageMargin();
                 setScreen(ScreenType::Alternate);
             }
@@ -2424,6 +2443,13 @@ void Terminal::setMode(DECMode mode, bool enable)
                 _currentScreen->restoreCursor();
             break;
         case DECMode::ExtendedAltScreen:
+            if (_settings.conPtyCompatAltScreen)
+            {
+                // UseAlternateScreen handler already handled the erase + screenUpdated.
+                // Just call it and return to skip _modes.set().
+                setMode(DECMode::UseAlternateScreen, enable);
+                return;
+            }
             if (enable)
             {
                 setMode(DECMode::UseAlternateScreen, true);
