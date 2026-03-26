@@ -211,12 +211,10 @@ void ConPty::close()
     ptyLog()("ConPty.close()");
     auto const _ = std::lock_guard { _mutex };
 
-    if (_master != INVALID_HANDLE_VALUE)
-    {
-        _conptyApi->closePseudoConsole(_master);
-        _master = INVALID_HANDLE_VALUE;
-    }
-
+    // Close pipe handles FIRST to immediately unblock any pending ReadFile/WriteFile
+    // in the reader thread.  ClosePseudoConsole() can block for several seconds while
+    // it waits for the child process to exit, and keeping the pipes open during that
+    // time leaves the reader thread stuck in ReadFile() the entire duration.
     if (_input != INVALID_HANDLE_VALUE)
     {
         CloseHandle(_input);
@@ -227,6 +225,12 @@ void ConPty::close()
     {
         CloseHandle(_output);
         _output = INVALID_HANDLE_VALUE;
+    }
+
+    if (_master != INVALID_HANDLE_VALUE)
+    {
+        _conptyApi->closePseudoConsole(_master);
+        _master = INVALID_HANDLE_VALUE;
     }
 }
 
